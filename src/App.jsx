@@ -209,20 +209,14 @@ export default function App() {
 
 const formRef = useRef();
 // ===== 공지사항 =====
-const [notices, setNotices] = useState([
-  {
-    id: 1,
-    title: "업데이트 안내",
-    content: "감지 카드 이동 기능이 추가되었습니다!",
-    createdAt: Date.now()
-  },
-  {
-    id: 2,
-    title: "버그 수정",
-    content: "아이콘 감지 오류가 일부 개선되었습니다.",
-    createdAt: Date.now() - 10000
-  }
-]);
+const [notices, setNotices] = useState([]);
+
+useEffect(() => {
+  fetch("/Notice.json?v=" + Date.now())
+    .then((res) => res.json())
+    .then((data) => setNotices(data))
+    .catch(() => {});
+}, []);
 
 // 최신 공지 1개
 const [noticeModalOpen, setNoticeModalOpen] = useState(false);
@@ -466,7 +460,38 @@ setPopover(null);
     { autoClose:false }
   );
 };
+const exportPresets = () => {
+  if (presets.length === 0) {
+    showToast("내보낼 프리셋이 없습니다.");
+    return;
+  }
+  const blob = new Blob([JSON.stringify(presets, null, 2)], { type: "application/json" });
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement("a");
+  a.href = url;
+  a.download = "mallang_presets.json";
+  a.click();
+  URL.revokeObjectURL(url);
+};
 
+const importPresets = (file) => {
+  if (!file) return;
+  const reader = new FileReader();
+  reader.onload = (e) => {
+    try {
+      const parsed = JSON.parse(e.target.result);
+      if (!Array.isArray(parsed)) throw new Error();
+      const merged = [...parsed, ...presets];
+      const deduped = merged.slice(0, 5);
+      setPresets(deduped);
+      localStorage.setItem("maple_timer_presets", JSON.stringify(deduped));
+      showToast("프리셋 가져오기 성공!");
+    } catch {
+      showToast("파일 형식이 올바르지 않습니다.");
+    }
+  };
+  reader.readAsText(file);
+};
 const deletePreset = (index, event) => {
 
   const updated = presets.filter((_,i)=>i!==Number(index));
@@ -1591,7 +1616,40 @@ e,
 <button onClick={() => { setPopover(null); setPresetModal("load"); }}>
   프리셋 불러오기
 </button>
+<button onClick={() => { setPopover(null); exportPresets(); }}>
+  파일 내보내기
+</button>
 
+<label style={{ cursor: "pointer" }}>
+  <input
+    type="file"
+    accept=".json"
+    style={{ display: "none" }}
+    onChange={(e) => {
+      setPopover(null);
+      importPresets(e.target.files[0]);
+      e.target.value = "";
+    }}
+  />
+  <span
+    style={{
+      display: "block",
+      padding: "0.5em 1.1em",
+      borderRadius: 8,
+      border: "1px solid rgba(255,255,255,0.08)",
+      background: "linear-gradient(180deg, #2a2a2a 0%, #1e1e1e 100%)",
+      color: "rgba(255,255,255,0.87)",
+      cursor: "pointer",
+      fontSize: "1em",
+      fontFamily: "inherit",
+      fontWeight: 500,
+      textAlign: "center",
+      boxShadow: "0 2px 6px rgba(0,0,0,0.4)",
+    }}
+  >
+    파일 가져오기
+  </span>
+</label>
 <button onClick={(e)=>resetToInitialSettings(e)}>
 초기 프리셋
 </button>
