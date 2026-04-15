@@ -3189,7 +3189,7 @@ style={{
     letterSpacing: "0.3px",
   }}
 >
-  ⓒ 2026. malancider All rights reserved.
+  ⓒ 2026. malancider All rights reserved. · v1.0.0 (Beta)
 </div>
 
     </div>
