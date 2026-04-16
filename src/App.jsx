@@ -460,18 +460,48 @@ setPopover(null);
     { autoClose:false }
   );
 };
-const exportPresets = () => {
+const exportPresets = (event) => {
   if (presets.length === 0) {
     showToast("내보낼 프리셋이 없습니다.");
     return;
   }
-  const blob = new Blob([JSON.stringify(presets, null, 2)], { type: "application/json" });
-  const url = URL.createObjectURL(blob);
-  const a = document.createElement("a");
-  a.href = url;
-  a.download = "mallang_presets.json";
-  a.click();
-  URL.revokeObjectURL(url);
+
+  let fileName = "preset";
+
+  showPopover(
+    event,
+    <>
+      현재 설정값을 파일로 내보냅니다.
+      <div style={{ marginTop: 8, marginBottom: 8 }}>
+        <input
+          type="text"
+          defaultValue=""
+          onChange={(e) => { fileName = e.target.value; }}
+          style={{ width: "100%", boxSizing: "border-box" }}
+          placeholder="파일 이름 입력"
+        />
+      </div>
+      <div style={{ display: "flex", gap: 6 }}>
+        <button onClick={() => {
+          const name = fileName.trim() === "" ? "preset" : fileName.trim();
+          const blob = new Blob([JSON.stringify(presets, null, 2)], { type: "application/json" });
+          const url = URL.createObjectURL(blob);
+          const a = document.createElement("a");
+          a.href = url;
+          a.download = `${name}.json`;
+          a.click();
+          URL.revokeObjectURL(url);
+          setPopover(null);
+        }}>
+          확인
+        </button>
+        <button onClick={() => setPopover(null)}>
+          취소
+        </button>
+      </div>
+    </>,
+    { autoClose: false }
+  );
 };
 
 const importPresets = (file) => {
@@ -565,6 +595,13 @@ const SOUND_LIST = [
 
 const DEFAULT_SOUND = "sfx_POP.wav";
 const audioCacheRef = useRef({});
+useEffect(() => {
+  SOUND_LIST.forEach(({ file }) => {
+    const audio = new Audio(`/${file}`);
+    audio.preload = "auto";
+    audioCacheRef.current[file] = audio;
+  });
+}, []);
 
 const playSound = (file, volume = 1) => {
   if (!file) return;
@@ -1153,7 +1190,7 @@ setPopover({
       flip: true,
       content: (
         <>
-          감지할 아이콘을 드래그 후<br />
+          감지할 아이콘을 최대한 정확하게 드래그 후<br />
           <strong>"저장"</strong> 버튼을 눌러주세요.
         </>
       ),
@@ -1616,7 +1653,7 @@ e,
 <button onClick={() => { setPopover(null); setPresetModal("load"); }}>
   프리셋 불러오기
 </button>
-<button onClick={() => { setPopover(null); exportPresets(); }}>
+<button onClick={(e) => { setPopover(null); exportPresets(e); }}>
   파일 내보내기
 </button>
 
@@ -1696,14 +1733,14 @@ e,
       📢 공지사항 :
     </span>
 
-    <span
+<span
       style={{
         whiteSpace: "nowrap",
         overflow: "hidden",
         textOverflow: "ellipsis"
       }}
     >
-      {latestNotice.title} - {latestNotice.content}
+      {latestNotice.preview || latestNotice.title}
     </span>
   </div>
 )}
@@ -2261,52 +2298,45 @@ onClick={() => playSound(timer.sound, timer.volume)}
 <div
 style={{
 display: "flex",
-gap: 8,
-justifyContent: "center"
+alignItems: "center",
+position: "relative",
+height: 40,
 }}
 >
- <button
-style={{
-height: 34,
-padding: "0 12px",
-fontSize: 15,
-whiteSpace: "nowrap",
-flexShrink: 0
-}}
-onClick={() => startRepeatTimer(timer.id)}
->
-시작
-</button>
+  <button
+  style={{
+    position: "absolute",
+    left: "50%",
+    transform: "translateX(-50%)",
+    height: 40,
+    width: 64,
+    fontSize: 18,
+    whiteSpace: "nowrap",
+    flexShrink: 0
+  }}
+  onClick={() => timer.running ? resetRepeatTimer(timer.id) : startRepeatTimer(timer.id)}
+  >
+  {timer.running ? "⏹" : "▶"}
+  </button>
 
-<button
-style={{
-height: 34,
-padding: "0 12px",
-fontSize: 15,
-whiteSpace: "nowrap",
-flexShrink: 0
-}}
-onClick={() => resetRepeatTimer(timer.id)}
->
-정지
-</button>
-
-<button
-style={{
-height: 34,
-padding: "0 12px",
-fontSize: 15,
-whiteSpace: "nowrap",
-flexShrink: 0
-}}
-onClick={() =>
-setRepeatTimers((prev) =>
-prev.filter((t) => t.id !== timer.id)
-)
-}
->
-삭제
-</button>
+  <button
+  style={{
+    position: "absolute",
+    right: 0,
+    height: 34,
+    padding: "0 12px",
+    fontSize: 15,
+    whiteSpace: "nowrap",
+    flexShrink: 0
+  }}
+  onClick={() =>
+  setRepeatTimers((prev) =>
+  prev.filter((t) => t.id !== timer.id)
+  )
+  }
+  >
+  삭제
+  </button>
 </div>
   </div>
 
@@ -2918,7 +2948,7 @@ onClick={() => {
             <h3 style={{ marginTop: 0, color: "#ffa500" }}>
               {selectedNotice.title}
             </h3>
-            <div style={{ fontSize: 14, color: "#ccc", lineHeight: 1.8 }}>
+<div style={{ fontSize: 14, color: "#ccc", lineHeight: 1.8, whiteSpace: "pre-line" }}>
               {selectedNotice.content}
             </div>
           </>
